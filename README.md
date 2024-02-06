@@ -1,3 +1,4 @@
+![image](https://github.com/KiranGunturu/glue-apache-hudi/assets/91672788/7aae7721-b985-4ec9-bd38-5a4af3675d60)
 
 
 # Real-time Data Migration and Upsert Pipeline: PostgreSQL to S3 with CDC, Glue, and Apache Hudi
