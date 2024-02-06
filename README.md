@@ -1,5 +1,4 @@
 
-![Alt text](image.png)
 
 # Real-time Data Migration and Upsert Pipeline: PostgreSQL to S3 with CDC, Glue, and Apache Hudi
 
