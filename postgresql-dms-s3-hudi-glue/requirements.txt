@@ -1,9 +1,4 @@
-SQLAlchemy=2.0.25
-pip install SQLAlchemy==1.4.46
+SQLAlchemy==1.4.46
 psycopg2
 Faker
-python-dotenv should be added to req.txt
-
-List argument must consist only of tuples or dictionaries
-
-allow all traffic
+python-dotenv
