@@ -123,6 +123,11 @@ Go to the Amazon RDS dashboard by selecting "RDS" from the list of services.
 #### 17. Lessons Learned
     1. 
 
+#### 17. Lessons Learned
+    1. SQLAlchemy version should be 1.4.46. version 2 seems to be not working.
+    2. Select parameter group family as "postgres" with the same version as your RDS instance. tried with diff version but custom parameter group is not being reflected in the RDS database options.
+    3. when both primaryKey and precombineKey have same values for 2 records, record which arrived most recent to the datalake will be considered for upsert.
+
 
 
 
