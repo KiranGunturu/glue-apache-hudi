@@ -120,6 +120,8 @@ Go to the Amazon RDS dashboard by selecting "RDS" from the list of services.
     2. provide precombineKey
     3. provide S3 location where we want to store the hudi dataset
     4. write operation as upsert
+#### 17. Lessons Learned
+    1. 
 
 
 
