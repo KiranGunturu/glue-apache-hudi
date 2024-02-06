@@ -120,9 +120,7 @@ Go to the Amazon RDS dashboard by selecting "RDS" from the list of services.
     2. provide precombineKey
     3. provide S3 location where we want to store the hudi dataset
     4. write operation as upsert
-#### 17. Lessons Learned
-    1. 
-
+    
 #### 17. Lessons Learned
     1. SQLAlchemy version should be 1.4.46. version 2 seems to be not working.
     2. Select parameter group family as "postgres" with the same version as your RDS instance. tried with diff version but custom parameter group is not being reflected in the RDS database options.
