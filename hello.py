@@ -81,3 +81,12 @@ verify_df_results.withColumnRenamed("constraint_status", "DQ_Status").show()
 df_dq_status = verify_df_results.withColumnRenamed("constraint_status", "DQ_Status")
 df_dq_status.filter(df_dq_status.DQ_Status == 'Failure').show()
 
+Write_to_tgt_df = df_dq_status.filter(df_dq_status.DQ_Status == 'Failure')
+if not Write_to_tgt_df.rdd.isEmpty():
+	Print(“No failure cases”)
+	Write_to_s3()
+else:
+	Print(“Address failed DQ checks”)
+	Report_to_rtb()
+
+
