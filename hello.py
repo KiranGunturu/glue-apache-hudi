@@ -18,28 +18,30 @@ spark = (SparkSession
 from pyspark.sql.types import StructType, IntegerType, StructField, StringType
 
 schema = StructType([
-    StructField("vin", StringType()),
-    StructField("make", StringType()),
-    StructField("model", StringType()),
-    StructField("year", IntegerType()),
-    StructField("color", StringType()),
-    StructField("mileage", IntegerType()),
-    StructField("country_code", StringType())
-
+    StructField("vin", StringType(), True),
+    StructField("year", IntegerType(), True),
+    StructField("model", StringType(), True),
+    StructField("color", StringType(), True),
+    StructField("mileage", IntegerType(), True),
+    StructField("country_code", StringType(), True),
+    StructField("body_style", StringType(), True),
+    StructField("retail_state_code", StringType(), True),
+    StructField("company_code", StringType(), True)
 ])
 
+
 vehicle_data = [
-    ("1HGBH41JXMN109186", "Toyota", "Camry", 2018, "Blue", 45000, "US"),
-    ("2HGFC2F59LH561098", "Honda", "Accord", 2019, "Red", 35000, "US"),
-    ("1FTFW1EF9HFA06953", "Ford", "F-150", 2017, "White", 60000, "US"),
-    ("1G1ZD5ST5KF165432", "Chevrolet", "Malibu", 2016, "Black", 55000, "CAN"),
-    ("1N4AL2AP5CN575420", "Nissan", "Altima", 2020, "Silver", 25000, "CAN"),
-    ("1C4BJWDG7JL863947", "Jeep", "Wrangler", 2015, "Green", 70000, "CAN"),
-    ("WBABW33434PL13736", "BMW", "3 Series", 2021, "Gray", 15000, "US"),
-    ("WDDWF4KB9DR274863", "Mercedes-Benz", "C-Class", 2018, "Black", 40000, "MEX"),
-    ("WAUACAFR1FA018742", "Audi", "A4", 2019, "White", 30000, "MEX"),
-    ("5NPD84LF6LH561234", "Hyundai", "Elantra", 2020, "Blue", 20000, "MEX"),
-    ("5NPD84LF6LH561234", "Hyundai", "Elantra", 2020, "Blue", 20000, "US")
+    ("1N4AL2AP5CN575420", 2020, "Altima", "Silver", 25000, "JP", "Sedan", "NY", "NISSAN"),
+    ("3N1AB8CV7LY265381", 2019, "Versa", "Black", 30000, "US", "Sedan", "CA", "NISSAN"),
+    ("JN1EV7AR4HM000014", 2017, "Leaf", "Blue", 15000, "MEX", "Hatchback", "TX", "NISSAN"),
+    ("JN8AZ1MU0CW123456", 2021, "Rogue", "White", 20000, "US", "SUV", "FL", "NISSAN"),
+    ("JN1AZ4EH4EM630176", 2014, "Maxima", "Red", 50000, "US", "Sedan", "GA", "NISSAN"),
+    ("5N1CR2MM5GC650002", 2016, "Murano", "Gray", 45000, "CAN", "SUV", "IL", "NISSAN"),
+    ("1N6BA0ED7FN535210", 2015, "Titan", "Silver", 60000, "MEX", "Truck", "WA", "NISSAN"),
+    ("5N1AA0NC7AN001234", 2018, "Pathfinder", "Black", 35000, "US", "SUV", "MI", "NISSAN"),
+    ("5N3AA08A76N800000", 2010, "Armada", "Brown", 70000, "CAN", "SUV", "NY", "NISSAN"),
+    ("JN8AY2NE7H9150000", 2013, "Quest", "Green", 55000, "CAN", "Minivan", "TX", "NISSAN"),
+    ("JN8AY2NE7H9150000", 2013, None, "Green", 55000, "US", "Minivan", "TX", "NISSAN")
 ]
 
 df = spark.createDataFrame(vehicle_data, schema)
@@ -59,18 +61,23 @@ checkResult = VerificationSuite(spark) \
     .onData(df) \
     .addCheck(
         check.hasSize(lambda x: x >= 11) \
-        .hasMin("year", lambda x: x == 2015) \
+        .hasMin("year", lambda x: x == 2010) \
         .hasMax("year", lambda x: x == 2021)  \
         .isComplete("model")  \
         .isUnique("vin")  \
         .isComplete("country_code")  \
         .isContainedIn("country_code", ["US", "CAN", "MEX"]) \
         .isNonNegative("year") \
-        .hasMaxLength("country_code", lambda x: x <=3)
+        .hasMaxLength("country_code", lambda x: x <=3) \
+        .hasUniqueness(["model", "body_style"], lambda x: x >= 0.8) \
         .hasDataType("year",ConstrainableDataTypes('String'))) \
     .run()
 
 print(f"Run Status: {checkResult.status}")
 verify_df_results = VerificationResult.checkResultsAsDataFrame(spark, checkResult)
-verify_df_results.show()
+verify_df_results.withColumnRenamed("constraint_status", "DQ_Status").show()
 #verify_df_results.printSchema()
+
+df_dq_status = verify_df_results.withColumnRenamed("constraint_status", "DQ_Status")
+df_dq_status.filter(df_dq_status.DQ_Status == 'Failure').show()
+
