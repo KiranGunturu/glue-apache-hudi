@@ -1,0 +1,60 @@
+{
+	"dag": {},
+	"jobConfig": {
+		"command": "glueetl",
+		"description": "hudi-operations",
+		"role": "arn:aws:iam::045119972392:role/glue-hudi",
+		"scriptName": "hudi-operations.py",
+		"version": "4.0",
+		"language": "python-3",
+		"scriptLocation": "s3://aws-glue-assets-045119972392-us-east-1/scripts/",
+		"temporaryDirectory": "s3://aws-glue-assets-045119972392-us-east-1/temporary/",
+		"timeout": 2880,
+		"maxConcurrentRuns": 1,
+		"workerType": "G.1X",
+		"numberOfWorkers": "3",
+		"maxRetries": 0,
+		"metrics": true,
+		"observabilityMetrics": true,
+		"security": "none",
+		"bookmark": "job-bookmark-disable",
+		"logging": true,
+		"spark": true,
+		"sparkConfiguration": "standard",
+		"sparkPath": "s3://aws-glue-assets-045119972392-us-east-1/sparkHistoryLogs/",
+		"serverEncryption": false,
+		"glueHiveMetastore": true,
+		"etlAutoScaling": false,
+		"etlAutoTuning": false,
+		"jobParameters": [
+			{
+				"key": "--datalake-formats",
+				"value": "hudi",
+				"existing": false
+			},
+			{
+				"key": "--conf",
+				"value": "spark.serializer=org.apache.spark.serializer.KryoSerializer --conf spark.sql.hive.convertMetastoreParquet=false",
+				"existing": false
+			},
+			{
+				"key": "--additional-python-modules",
+				"value": "faker==11.3.0",
+				"existing": false
+			}
+		],
+		"tags": [
+			{
+				"key": "product",
+				"value": "hudi",
+				"existing": false
+			}
+		],
+		"connectionsList": [],
+		"jobMode": "DEVELOPER_MODE",
+		"name": "hudi-operations",
+		"pythonPath": null
+	},
+	"hasBeenSaved": false,
+	"script": "try:\r\n    import os\r\n    import sys\r\n    import uuid\r\n\r\n    import pyspark\r\n    from pyspark import SparkConf, SparkContext\r\n    from pyspark.sql import SparkSession\r\n    from pyspark.sql.functions import col, asc, desc\r\n    from awsglue.utils import getResolvedOptions\r\n    from awsglue.dynamicframe import DynamicFrame\r\n    from awsglue.context import GlueContext\r\n\r\n    from faker import Faker\r\n\r\n    print(\"All modules are loaded .....\")\r\n\r\nexcept Exception as e:\r\n    print(\"Some modules are missing {} \".format(e))\r\n\r\n\r\n# ----------------------------------------------------------------------------------------\r\n#                 Settings\r\n# -----------------------------------------------------------------------------------------\r\n\r\ndatabase_name = \"hudidb\"\r\ntable_name = \"hudi_table\"\r\nbase_s3_path = \"s3://apache-hudi-glue\"\r\nfinal_base_path = \"{base_s3_path}/{table_name}\".format(\r\n    base_s3_path=base_s3_path, table_name=table_name\r\n)\r\n\r\n# ----------------------------------------------------------------------------------------------------\r\nglobal faker\r\nfaker = Faker()\r\n\r\n\r\nclass DataGenerator(object):\r\n\r\n    @staticmethod\r\n    def get_data():\r\n        return [\r\n            (\r\n                x,\r\n                faker.name(),\r\n                faker.random_element(elements=('IT', 'HR', 'Sales', 'Marketing')),\r\n                faker.random_element(elements=('CA', 'NY', 'TX', 'FL', 'IL', 'RJ')),\r\n                faker.random_int(min=10000, max=150000),\r\n                faker.random_int(min=18, max=60),\r\n                faker.random_int(min=0, max=100000),\r\n                faker.unix_time()\r\n            ) for x in range(5)\r\n        ]\r\n\r\n\r\ndef create_spark_session():\r\n    spark = SparkSession \\\r\n        .builder \\\r\n        .config('spark.serializer', 'org.apache.spark.serializer.KryoSerializer') \\\r\n        .getOrCreate()\r\n    return spark\r\n\r\n\r\nspark = create_spark_session()\r\nsc = spark.sparkContext\r\nglueContext = GlueContext(sc)\r\n\r\n\"\"\"\r\nCHOOSE ONE \r\n\"hoodie.datasource.write.storage.type\": \"MERGE_ON_READ\",\r\n\"hoodie.datasource.write.storage.type\": \"COPY_ON_WRITE\",\r\n\"\"\"\r\n\r\n\r\nhudi_options = {\r\n    'hoodie.table.name': table_name,\r\n    \"hoodie.datasource.write.storage.type\": \"COPY_ON_WRITE\",\r\n    'hoodie.datasource.write.recordkey.field': 'emp_id',\r\n    'hoodie.datasource.write.table.name': table_name,\r\n    'hoodie.datasource.write.operation': 'upsert',\r\n    'hoodie.datasource.write.precombine.field': 'ts',\r\n\r\n    'hoodie.datasource.hive_sync.enable': 'true',\r\n    \"hoodie.datasource.hive_sync.mode\":\"hms\",\r\n    'hoodie.datasource.hive_sync.sync_as_datasource': 'false',\r\n    'hoodie.datasource.hive_sync.database': database_name,\r\n    'hoodie.datasource.hive_sync.table': table_name,\r\n    'hoodie.datasource.hive_sync.use_jdbc': 'false',\r\n    'hoodie.datasource.hive_sync.partition_extractor_class': 'org.apache.hudi.hive.MultiPartKeysValueExtractor',\r\n    'hoodie.datasource.write.hive_style_partitioning': 'true',\r\n\r\n}\r\n\r\n\r\n# ====================================================\r\n\"\"\"Create Spark Data Frame \"\"\"\r\n# ====================================================\r\ndata = DataGenerator.get_data()\r\n\r\ncolumns = [\"emp_id\", \"employee_name\", \"department\", \"state\", \"salary\", \"age\", \"bonus\", \"ts\"]\r\ndf = spark.createDataFrame(data=data, schema=columns)\r\ndf.write.format(\"hudi\").options(**hudi_options).mode(\"overwrite\").save(final_base_path)\r\n\r\n# ====================================================\r\n\"\"\"APPEND \"\"\"\r\n# ====================================================\r\n\r\nimpleDataUpd = [\r\n    (6, \"This is APPEND\", \"Sales\", \"RJ\", 81000, 30, 23000, 827307999),\r\n    (7, \"This is APPEND\", \"Engineering\", \"RJ\", 79000, 53, 15000, 1627694678),\r\n]\r\n\r\ncolumns = [\"emp_id\", \"employee_name\", \"department\", \"state\", \"salary\", \"age\", \"bonus\", \"ts\"]\r\nusr_up_df = spark.createDataFrame(data=impleDataUpd, schema=columns)\r\nusr_up_df.write.format(\"hudi\").options(**hudi_options).mode(\"append\").save(final_base_path)\r\n\r\n\r\n\r\n# ====================================================\r\n\"\"\"UPDATE \"\"\"\r\n# ====================================================\r\nimpleDataUpd = [\r\n    (3, \"this is update on data lake\", \"Sales\", \"RJ\", 81000, 30, 23000, 827307999),\r\n]\r\ncolumns = [\"emp_id\", \"employee_name\", \"department\", \"state\", \"salary\", \"age\", \"bonus\", \"ts\"]\r\nusr_up_df = spark.createDataFrame(data=impleDataUpd, schema=columns)\r\nusr_up_df.write.format(\"hudi\").options(**hudi_options).mode(\"append\").save(final_base_path)\r\n\r\n\r\n# ====================================================\r\n\"\"\"HARD DELETE \"\"\"\r\n# ====================================================\r\n\r\n\r\nprint(\"\\n\")\r\nhard_delete_df = spark.sql(\"SELECT * FROM hudidb.hudi_table where emp_id='4' \")\r\nprint(hard_delete_df.show())\r\nprint(\"\\n\")\r\nhudi_options['hoodie.datasource.write.operation'] = 'delete'\r\nhard_delete_df.write.format(\"hudi\").options(**hudi_options).mode(\"append\").save(final_base_path)\r\n\r\n\r\n# ====================================================\r\n\"\"\"CLUSTERING  \"\"\"\r\n# ====================================================\r\nhudi_options['hoodie.clustering.plan.strategy.sort.columns'] = 'state'\r\nhudi_options['hoodie.clustering.plan.strategy.max.bytes.per.group'] = '107374182400'\r\nhudi_options['hoodie.clustering.plan.strategy.max.num.groups'] = '1'\r\n\r\n\r\nhudi_options['hoodie.cleaner.policy'] = 'KEEP_LATEST_FILE_VERSIONS'\r\n\r\n\r\ncluster_df = spark.sql(\"SELECT * FROM hudidb.hudi_table \")\r\ncluster_df.write.format(\"hudi\").options(**hudi_options).mode(\"append\").save(final_base_path)"
+}
