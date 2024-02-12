@@ -34,7 +34,7 @@ AmazonS3_node1671052685135 = glueContext.create_dynamic_frame.from_options(
     format_options={"multiline": False},
     connection_type="s3",
     format="json",
-    connection_options={"paths": ["s3://glue-learn-begineers/data/"], "recurse": True},
+    connection_options={"paths": ["s3://apache-hudi-glue/data/"], "recurse": True},
     transformation_ctx="AmazonS3_node1671052685135",
 )
 
@@ -67,7 +67,7 @@ ApacheHudiConnector0101forAWSGlue30_node1671052751031 = (
         frame=ChangeSchemaApplyMapping_node1671052735917,
         connection_type="marketplace.spark",
         connection_options={
-            "path": "s3://glue-learn-begineers/hudi/",
+            "path": "s3://apache-hudi-glue/hudi/",
             "connectionName": "hudi-connection",
 
             "hoodie.datasource.write.storage.type": "COPY_ON_WRITE",
