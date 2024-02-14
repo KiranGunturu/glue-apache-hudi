@@ -1,5 +1,6 @@
 try:
     import os
+    import sys
     os.environ["SPARK_VERSION"]="3.2"
     from pyspark.sql import SparkSession, Row
     import pydeequ
@@ -88,5 +89,6 @@ if not Write_to_tgt_df.rdd.isEmpty():
 else:
 	Print(“Address failed DQ checks”)
 	Report_to_rtb()
+	sys.exit(1)
 
 
