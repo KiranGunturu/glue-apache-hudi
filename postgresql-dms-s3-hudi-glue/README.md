@@ -133,6 +133,8 @@ Go to the Amazon RDS dashboard by selecting "RDS" from the list of services.
     cleaning by the latest file versions
     concurrency control - avoid multiple writers writing to same table at same same - locking in DynamoDB
     SCD-2
+    identify schema changes and notify when there are changes in schema
+    rollback to spec commit incase disaster
 
 
 
